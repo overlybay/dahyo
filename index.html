@@ -11,16 +11,21 @@
 <header id="topbar">
   <div class="logo" title="DAhYO — free web DAW, free forever">DA<span>h</span>YO</div>
 
-  <div class="transport" role="toolbar" aria-label="Transport">
+  <div class="transport" id="transport" role="toolbar" aria-label="Transport">
+    <span id="transport-grip" title="Drag to move the floating transport">⋮⋮</span>
     <button id="btn-rw" class="tbtn" title="Back to start">⏮</button>
     <button id="btn-play" class="tbtn big" title="Play / Stop (Space)">▶</button>
     <button id="btn-stop" class="tbtn" title="Stop">⏹</button>
     <button id="btn-rec" class="tbtn rec" title="Record on armed track — R arms the selected track">●</button>
+    <button id="btn-countin" class="tbtn" title="Count-in off — click for 1 bar">1-2-3</button>
+    <button id="btn-voice" class="tbtn" title="AI Engineer — hands-free voice commands (Chrome/Edge). Mic is only used for commands while this is on.">🎙</button>
     <button id="btn-loop" class="tbtn" title="Loop whole project (L)">🔁</button>
     <button id="btn-undo" class="tbtn" title="Undo (Ctrl/Cmd+Z)">↶</button>
     <button id="btn-redo" class="tbtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷</button>
     <button id="btn-mark" class="tbtn" title="Add marker at playhead (click marker to jump, double-click to rename, right-click to delete)">⚑</button>
+    <button id="btn-undock" class="tbtn" title="Undock transport — floating draggable window">⧉</button>
     <div id="time-display" title="Playhead position">0:00.0</div>
+    <div id="voice-heard" hidden></div>
   </div>
 
   <div class="tempo" title="Tempo & metronome">
@@ -31,9 +36,12 @@
     <button id="btn-metro" class="tbtn" title="Metronome on/off">🥁</button>
   </div>
 
+  <div id="artist-sel-wrap" title="Artist profile — Auto learns how each artist likes things"></div>
+
   <div class="viewtoggle" role="tablist" aria-label="View">
-    <button id="view-arrange" class="vbtn active" title="Arrangement / timeline view">Arrange</button>
-    <button id="view-mixer" class="vbtn" title="Mixer view with channel strips and meters">Mixer</button>
+    <button id="view-arrange" class="vbtn active" title="Edit window — arrangement / timeline">Edit</button>
+    <button id="view-mixer" class="vbtn" title="Mix window — channel strips and meters">Mix</button>
+    <button id="view-master" class="vbtn" title="Mastering — final loudness, chain and export">Master</button>
   </div>
 
   <div class="actions">
@@ -49,6 +57,20 @@
 <main>
   <!-- ============ ARRANGE VIEW ============ -->
   <section id="arrange-view">
+    <div id="edit-toolbar" role="toolbar" aria-label="Edit tools">
+      <button id="btn-snap" class="tbtn on" title="Snap clips to the grid — on: clips snap to grid divisions; off: free placement">🧲 Snap</button>
+      <select id="snap-div" title="Grid division for snapping">
+        <option value="bar">Bar</option>
+        <option value="beat" selected>Beat</option>
+        <option value="8th">1/8</option>
+        <option value="16th">1/16</option>
+      </select>
+      <span class="tb-sep"></span>
+      <button id="btn-punch" class="tbtn" title="Punch in/out — takes keep only the audio between the punch points">🥊 Punch</button>
+      <button id="punch-setin" class="abtn ghost small" title="Set punch-in at the playhead">Set In</button>
+      <button id="punch-setout" class="abtn ghost small" title="Set punch-out at the playhead">Set Out</button>
+      <span id="punch-times" class="dim small"></span>
+    </div>
     <div id="track-headers" aria-label="Tracks"></div>
     <div id="timeline-wrap">
       <canvas id="timeline" title="Click to move the playhead. Click a clip to select it, drag to move it, drag the amber edge handles for fades. ⚑ markers: click to jump, double-click to rename, right-click to delete. Drag & drop audio files onto a track to import."></canvas>
@@ -67,7 +89,34 @@
   <!-- ============ MIXER VIEW ============ -->
   <section id="mixer-view" hidden>
     <div id="strips" aria-label="Channel strips"></div>
-    <div class="mixer-note">Meters are post-fader — what you see is what you hear. Double-click a strip name to rename.</div>
+    <div class="mixer-note">Meters are post-fader — what you see is what you hear. The red light above a meter means the signal clipped — click it to reset. Double-click a strip name to rename.</div>
+  </section>
+
+  <!-- ============ MASTERING VIEW ============ -->
+  <section id="master-view" hidden>
+    <div class="mast-head">
+      <h2>Mastering</h2>
+      <div class="mast-actions">
+        <button id="btn-mast-bypass" class="abtn on" title="A/B: compare the mastered mix against the unmastered mix">A/B: Mastered</button>
+        <span class="dim small">A/B compares the mastered mix against the raw mix.</span>
+      </div>
+    </div>
+    <div class="mast-meters">
+      <canvas id="mast-meter" width="520" height="64" title="Peak and RMS of the final master"></canvas>
+      <div class="mast-readouts">
+        <div>Peak <b id="mast-peak">—</b></div>
+        <div>RMS <b id="mast-rms">—</b></div>
+        <div>Loudness <b id="mast-lufs">—</b> <span class="dim small" title="Simplified integrated estimate, not a certified LUFS meter">*estimated</span></div>
+      </div>
+    </div>
+    <div id="mast-templates" class="mast-templates" aria-label="Mastering templates"></div>
+    <div id="mast-chain" class="mast-chain" aria-label="Mastering chain"></div>
+    <div id="mast-dither" class="mast-dither"></div>
+    <div class="mast-export">
+      <button id="btn-exp-mastered" class="abtn accent" title="Export the final mastered mix (full chain + dither)">Export mastered WAV</button>
+      <button id="btn-exp-premaster" class="abtn" title="Export the mix without the mastering chain">Export premaster WAV</button>
+      <span class="dim small">Premaster = mix without the mastering chain. More formats in Export WAV (top).</span>
+    </div>
   </section>
 </main>
 
@@ -146,9 +195,11 @@
     <h2>DAhYO Help</h2>
     <h3>Basics</h3>
     <div class="dim small">
-      ＋ Track creates audio or aux tracks, mono or stereo — imported beats land on stereo automatically.
-      Select a track and hit R to arm it (●), then the record button to roll. Space plays/stops, Enter plays from the start, L loops.
-      Every channel has Tune → EQ → Comp → Delay → Reverb; save any vocal chain as a template and apply it anywhere.
+      ＋ Track creates audio or aux tracks, mono or stereo — imported beats land on stereo automatically, and the BPM/key finder listens to your first import.
+      Select a track and hit R to arm it (●), 🔊 to hear the input, then the record button to roll. Space plays/stops, Enter plays from the start, L loops.
+      Every channel has Tune → EQ → De-Esser → Gate → Comp → Saturator → Chorus → Flanger → Echo → Ping-Pong → Reverb → Tremolo → Auto-Filter → Widener → Limiter, plus a Vocal Rack.
+      Tap ⚡ Auto on any plugin and it tunes itself to your track — every knob stays tweakable. The Master track has its own inserts; the Master view holds the mastering chain.
+      🎙 in the transport is the AI Engineer — hands-free voice commands while you record (Chrome/Edge).
       Sessions autosave in this browser (audio included); export .dahyo files to move work between devices.
     </div>
     <h3>Keyboard shortcuts</h3>
@@ -189,6 +240,85 @@
     <div class="dim small">You can change this anytime in Sessions. Vocal chain templates are saved as files too.</div>
   </div>
 </div>
+<!-- ============ BPM / KEY FINDER ============ -->
+<div id="modal-analyze" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-label="Detected tempo and key">
+    <h2>What we heard</h2>
+    <div class="an-row"><span>Tempo</span><b id="an-bpm">—</b><span class="dim small" id="an-bpm-conf"></span></div>
+    <div class="an-row"><span>Key</span><b id="an-key">—</b><span class="dim small" id="an-key-conf"></span></div>
+    <p class="dim small">Detected from the audio you imported — no libraries, analyzed right in your browser. Apply it to the whole project, or dismiss.</p>
+    <div class="modal-btns">
+      <button id="an-dismiss" class="abtn ghost">Dismiss</button>
+      <button id="an-use" class="abtn accent">Use this tempo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PLUGIN LIBRARY ============ -->
+<div id="modal-plugins" class="modal" hidden>
+  <div class="modal-card wide" role="dialog" aria-label="Plugin library">
+    <div class="mhead"><h2>Plugin Library</h2><span class="spacer"></span><button id="plugins-close" class="abtn ghost">✕</button></div>
+    <input id="plugin-search" type="text" placeholder="Search plugins…" aria-label="Search plugins">
+    <div id="plugin-cats" class="catchips" aria-label="Browse by category"></div>
+    <div id="plugin-list" class="plugin-list"></div>
+    <p class="dim small">Picking a plugin adds it to the selected track — and it Auto-tunes itself to your audio first instead of sitting on generic settings.</p>
+  </div>
+</div>
+
+<!-- ============ VOCAL RACK ============ -->
+<div id="modal-rack" class="modal" hidden>
+  <div class="modal-card wide" role="dialog" aria-label="Vocal Rack">
+    <div class="mhead">
+      <h2 id="rack-title">Vocal Rack</h2><span class="spacer"></span>
+      <button id="rack-close" class="abtn ghost">✕</button>
+    </div>
+    <div class="rack-top">
+      <label>Starter stack
+        <select id="rack-preset" title="Load a starter chain — everything stays tweakable">
+          <option value="">Pick a starter…</option>
+        </select>
+      </label>
+      <label>Add module
+        <select id="rack-add-sel" title="Add a module to the rack"></select>
+      </label>
+      <button id="rack-add" class="abtn" title="Add the module to the end of the rack">+ Add</button>
+    </div>
+    <p class="dim small">Modules run top → bottom. ▲▼ reorder, ⚡ Auto tunes a module to the track, ON/OFF bypasses, ✕ removes. Every knob stays tweakable.</p>
+    <div id="rack-modules" class="rack-modules"></div>
+  </div>
+</div>
+
+<!-- ============ EXPORT ============ -->
+<div id="modal-export" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-label="Export WAV">
+    <h2>Export WAV</h2>
+    <label class="fld">Version
+      <select id="exp-version">
+        <option value="mastered">Mastered — full mastering chain + dither</option>
+        <option value="premaster">Premaster — mix without the mastering chain</option>
+      </select>
+    </label>
+    <label class="fld">Sample rate
+      <select id="exp-rate">
+        <option value="44100">44.1 kHz — CD</option>
+        <option value="48000">48 kHz — video</option>
+        <option value="96000">96 kHz — high resolution</option>
+      </select>
+    </label>
+    <label class="fld">Bit depth
+      <select id="exp-bits">
+        <option value="16">16-bit</option>
+        <option value="24">24-bit</option>
+      </select>
+    </label>
+    <p class="dim small">Dither is applied when mastering to 16-bit for silky fade-outs.</p>
+    <div class="modal-btns">
+      <button id="exp-cancel" class="abtn ghost">Cancel</button>
+      <button id="exp-go" class="abtn accent">Export</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" hidden></div>
 
 <script src="app.js"></script>
