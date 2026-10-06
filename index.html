@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DAhYO — Free Web DAW</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="logo" title="DAhYO — free web DAW, free forever">DA<span>h</span>YO</div>
+
+  <div class="transport" role="toolbar" aria-label="Transport">
+    <button id="btn-rw" class="tbtn" title="Back to start">⏮</button>
+    <button id="btn-play" class="tbtn big" title="Play / Stop (Space)">▶</button>
+    <button id="btn-stop" class="tbtn" title="Stop">⏹</button>
+    <button id="btn-rec" class="tbtn rec" title="Record on armed track — R arms the selected track">●</button>
+    <button id="btn-loop" class="tbtn" title="Loop whole project (L)">🔁</button>
+    <button id="btn-undo" class="tbtn" title="Undo (Ctrl/Cmd+Z)">↶</button>
+    <button id="btn-redo" class="tbtn" title="Redo (Ctrl/Cmd+Shift+Z)">↷</button>
+    <button id="btn-mark" class="tbtn" title="Add marker at playhead (click marker to jump, double-click to rename, right-click to delete)">⚑</button>
+    <div id="time-display" title="Playhead position">0:00.0</div>
+  </div>
+
+  <div class="tempo" title="Tempo & metronome">
+    <label>BPM <input id="bpm" type="number" min="40" max="240" value="140" title="Beats per minute"></label>
+    <select id="timesig" title="Time signature">
+      <option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option>
+    </select>
+    <button id="btn-metro" class="tbtn" title="Metronome on/off">🥁</button>
+  </div>
+
+  <div class="viewtoggle" role="tablist" aria-label="View">
+    <button id="view-arrange" class="vbtn active" title="Arrangement / timeline view">Arrange</button>
+    <button id="view-mixer" class="vbtn" title="Mixer view with channel strips and meters">Mixer</button>
+  </div>
+
+  <div class="actions">
+    <button id="btn-addtrack" class="abtn" title="New track: audio or aux, mono or stereo">＋ Track</button>
+    <button id="btn-demo" class="abtn ghost" title="Add a demo beat + 808 track">Demo</button>
+    <button id="btn-io" class="abtn ghost" title="I/O setup: input/output devices, buses, routing">I/O</button>
+    <button id="btn-sessions" class="abtn ghost" title="Sessions: save / load / delete named sessions (autosave is always on, audio included)">Sessions</button>
+    <button id="btn-help" class="abtn ghost" title="Help & browser support">?</button>
+    <button id="btn-export" class="abtn accent" title="Export full mix (tracks + auxes + buses) to WAV">Export WAV</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ ARRANGE VIEW ============ -->
+  <section id="arrange-view">
+    <div id="track-headers" aria-label="Tracks"></div>
+    <div id="timeline-wrap">
+      <canvas id="timeline" title="Click to move the playhead. Click a clip to select it, drag to move it, drag the amber edge handles for fades. ⚑ markers: click to jump, double-click to rename, right-click to delete. Drag & drop audio files onto a track to import."></canvas>
+    </div>
+    <div id="zoombar" role="toolbar" aria-label="Timeline zoom">
+      <button id="zoom-out" title="Zoom out (Ctrl/Cmd+−)">−</button>
+      <button id="zoom-fit" title="Fit whole session in view (Ctrl/Cmd+0)">Fit</button>
+      <button id="zoom-in" title="Zoom in (Ctrl/Cmd++)">+</button>
+    </div>
+    <aside id="inspector" aria-label="Selected channel">
+      <div class="ins-head"><span id="ins-title">No channel selected</span></div>
+      <div id="ins-body"></div>
+    </aside>
+  </section>
+
+  <!-- ============ MIXER VIEW ============ -->
+  <section id="mixer-view" hidden>
+    <div id="strips" aria-label="Channel strips"></div>
+    <div class="mixer-note">Meters are post-fader — what you see is what you hear. Double-click a strip name to rename.</div>
+  </section>
+</main>
+
+<footer id="statusbar">
+  <span id="status-msg">Welcome to DAhYO — free forever. Hit ＋ Track to start, or drop in a beat.</span>
+  <span id="status-right">Space play · Enter from start · Ctrl/Cmd+Z undo · R arm · M mute · S solo · ←/→ nudge · ? help</span>
+</footer>
+
+<!-- ============ NEW TRACK DIALOG ============ -->
+<div id="modal-newtrack" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-label="New track">
+    <h2>New Track</h2>
+    <label class="fld">Name <input id="nt-name" type="text" value="Audio 1" maxlength="32"></label>
+    <div class="fld">Type<br>
+      <label class="radio"><input type="radio" name="nt-type" value="audio" checked> Audio Track</label>
+      <label class="radio"><input type="radio" name="nt-type" value="aux"> Aux Track <span class="dim">— FX return / submix</span></label>
+    </div>
+    <div class="fld">Format<br>
+      <label class="radio"><input type="radio" name="nt-format" value="mono"> Mono</label>
+      <label class="radio"><input type="radio" name="nt-format" value="stereo" checked> Stereo</label>
+    </div>
+    <p class="dim small">New aux tracks auto-create a matching bus already routed to their input — point any Send at that bus for instant reverb/delay throws.</p>
+    <div class="modal-btns">
+      <button id="nt-cancel" class="abtn ghost">Cancel</button>
+      <button id="nt-create" class="abtn accent">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ I/O SETUP ============ -->
+<div id="modal-io" class="modal" hidden>
+  <div class="modal-card wide" role="dialog" aria-label="Audio I/O setup">
+    <h2>Audio I/O Setup</h2>
+    <h3>Input devices <span class="dim small">— for recording (per-track input is in the inspector)</span></h3>
+    <div id="io-inputs" class="io-list"><span class="dim">Scanning…</span></div>
+    <h3>Output devices</h3>
+    <div id="io-outputs" class="io-list"><span class="dim">Scanning…</span></div>
+    <h3>Buses</h3>
+    <div id="io-buses" class="io-list"></div>
+    <div class="bus-add">
+      <input id="bus-name" type="text" placeholder="Bus name" maxlength="24" title="New bus name">
+      <select id="bus-format" title="Bus format"><option value="stereo">Stereo</option><option value="mono">Mono</option></select>
+      <button id="bus-add-btn" class="abtn" title="Create bus">＋ Bus</button>
+    </div>
+    <h3>Routing</h3>
+    <div id="io-routing" class="io-routing"></div>
+    <div class="modal-btns"><button id="io-close" class="abtn accent">Done</button></div>
+  </div>
+</div>
+
+<!-- ============ SESSIONS ============ -->
+<div id="modal-sessions" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-label="Sessions">
+    <h2>Sessions</h2>
+    <div class="dim small" id="sess-autosave-note">Autosave is always on — your current work (settings + audio) is saved automatically in this browser. Name a session to keep it forever and reload it anytime.</div>
+    <div class="sess-actions">
+      <button id="sess-save" class="abtn accent" title="Save the current work into the open named session, or name it">Save</button>
+      <button id="sess-saveas" class="abtn" title="Save the current work under a new name">Save as new…</button>
+      <button id="sess-new" class="abtn ghost" title="Start a fresh empty session">New</button>
+      <button id="sess-export" class="abtn" title="Download this session as a .dahyo file (settings + audio) you can move to another device">Export file</button>
+      <button id="sess-import" class="abtn" title="Open a .dahyo session file from your device">Import file</button>
+    </div>
+    <h3>Saved sessions</h3>
+    <div id="sess-list" class="io-list"></div>
+    <div id="sess-folder-row" class="dim small sess-note"></div>
+    <div id="sess-file-status" class="dim small sess-note"></div>
+    <div class="modal-btns"><button id="sess-close" class="abtn accent">Done</button></div>
+  </div>
+</div>
+
+<input id="file-input" type="file" accept="audio/*" multiple hidden>
+<input id="dahyo-file-input" type="file" accept=".dahyo" hidden>
+<!-- ============ HELP / BROWSER SUPPORT ============ -->
+<div id="modal-help" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-label="Help and browser support">
+    <h2>DAhYO Help</h2>
+    <h3>Basics</h3>
+    <div class="dim small">
+      ＋ Track creates audio or aux tracks, mono or stereo — imported beats land on stereo automatically.
+      Select a track and hit R to arm it (●), then the record button to roll. Space plays/stops, Enter plays from the start, L loops.
+      Every channel has Tune → EQ → Comp → Delay → Reverb; save any vocal chain as a template and apply it anywhere.
+      Sessions autosave in this browser (audio included); export .dahyo files to move work between devices.
+    </div>
+    <h3>Keyboard shortcuts</h3>
+    <table class="shortcuts">
+      <tr><td><kbd>Space</kbd></td><td>Play / stop</td><td><kbd>Enter</kbd></td><td>Play from start</td></tr>
+      <tr><td><kbd>Ctrl/⌘ Z</kbd></td><td>Undo</td><td><kbd>Ctrl/⌘ ⇧ Z</kbd></td><td>Redo</td></tr>
+      <tr><td><kbd>Ctrl/⌘ S</kbd></td><td>Save session</td><td><kbd>L</kbd></td><td>Loop on/off</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Arm selected track for recording</td><td><kbd>M</kbd></td><td>Mute selected track</td></tr>
+      <tr><td><kbd>S</kbd></td><td>Solo selected track</td><td><kbd>←</kbd> <kbd>→</kbd></td><td>Nudge playhead — or selected clip (⇧ = 1 bar)</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Select track up / down</td><td><kbd>Ctrl/⌘ +</kbd> <kbd>−</kbd> <kbd>0</kbd></td><td>Zoom in / out / fit timeline</td></tr>
+    </table>
+    <h3>Timeline tips</h3>
+    <div class="dim small">
+      Click a clip to select it, drag it to move it, drag its amber edge handles for fade in/out.
+      ⚑ adds a marker at the playhead — click it to jump, double-click to rename, right-click to delete.
+      ⧉ on a track header or mixer strip duplicates the track with everything (clips, FX, routing, fader/pan).
+    </div>
+    <h3>Browser support</h3>
+    <div class="dim small">
+      The full DAW — recording, mixing, effects, WAV export, sessions — works in <b>Chrome, Edge, Safari and Firefox</b> on Windows and Mac.<br><br>
+      <b>Output-device switching</b> needs Chrome or Edge (it requires setSinkId) — Safari and Firefox use the system default output.<br><br>
+      <b>Save-folder auto-save</b> (.dahyo files on your device) needs Chrome or Edge (File System Access API) —
+      everywhere else sessions stay in the browser and you can still export/import .dahyo files by hand.<br><br>
+      <b>Recording</b> needs microphone permission; Safari records takes as mp4 instead of webm — handled automatically.<br><br>
+      <b>Pitch correction (Tune)</b> needs AudioWorklet, supported in all four modern browsers — if a browser lacks it,
+      the Tune effect is bypassed and labeled, and everything else keeps working.
+    </div>
+    <div class="modal-btns"><button id="help-close" class="abtn accent">Done</button></div>
+  </div>
+</div>
+<div id="modal-folder" class="modal" hidden>  <div class="modal-card" role="dialog" aria-label="Save folder">
+    <h2>Where should DAhYO keep your sessions?</h2>
+    <p class="dim">DAhYO can auto-save every session as a <b>.dahyo</b> file inside a <b>DAhYO Sessions</b> folder on this device — real files you can copy, back up, or move to another computer. Nothing is written anywhere until you choose.</p>
+    <div class="sess-actions">
+      <button id="folder-choose" class="abtn accent">Choose save folder…</button>
+      <button id="folder-browser" class="abtn ghost">Just use this browser</button>
+    </div>
+    <div class="dim small">You can change this anytime in Sessions. Vocal chain templates are saved as files too.</div>
+  </div>
+</div>
+<div id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
